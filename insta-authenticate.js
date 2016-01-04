@@ -30,8 +30,27 @@ exports.handleauth = function(req , res) {
   });
 };
 
+exports.handle_media = function(req, res) {
+  api.use({
+    access_token: '1607981087.7d36b85.b9e76e34478d4eb7939511b8065245ed'
+  });
+
+  var n_medias = 10;
+  if(req.query.c > 0){
+    n_medias = req.query.c;
+  }
+
+  api.user_self_media_recent({ count: n_medias }, function(err, medias, pagination, remaining, limit) {
+    var html_list = medias.map(function(media){
+      return '<a href="' + media.link + '"><img src="' + media.images.thumbnail.url + '"/></a>';
+    }).join('');
+    res.send(html_list);
+  });
+};
+
 app.get('/auth', exports.authorize_user);
 app.get('/r', exports.handleauth);
+app.get('/media', exports.handle_media);
 
 http.createServer(app).listen(10001, function() {
   console.log('listening on port: ' + 10001);

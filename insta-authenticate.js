@@ -2,7 +2,7 @@ var http = require('http');
 var express = require('express');
 var api = require('instagram-node').instagram();
 var app = express();
-var access_token_user;
+var moment = require('moment');
 
 api.use({
   client_id: '7d36b8506e3241ebbd811a1650f40a41',
@@ -10,11 +10,12 @@ api.use({
 });
 
 var redirect_uri = 'http://h120n8-sto-a12.ias.bredband.telia.com:10001/r';
+var access_token_user;
 
 exports.authorize_user = function(req, res) {
   res.redirect(
     api.get_authorization_url(redirect_uri, {
-      scope: ['likes'], state: 'a state'
+      scope: ['public_content', 'follower_list'], state: 'a state'
     })
   );
 };
@@ -44,7 +45,7 @@ exports.handle_media = function(req, res) {
     n_medias = req.query.c;
   }
 
-  api.user_self_media_recent({ count: n_medias }, function(err, medias, pagination, remaining, limit) {
+  api.user_self_media_recent({ count: n_medias, min_timestamp: from_ts , max_timestamp: to_ts}, function(err, medias, pagination, remaining, limit) {
     var html_list = medias.map(function(media){
       return '<a href="' + media.link + '"><img src="' + media.images.thumbnail.url + '"/></a>';
     }).join('');
@@ -52,9 +53,42 @@ exports.handle_media = function(req, res) {
   });
 };
 
+exports.handle_moment = function(req, res) {
+  api.use({
+    access_token: '193441256.7d36b85.2f2cd5e794bd45199f5607b3b2eff080'
+  });
+
+  var from_ts = moment(0, 'HH');
+  var to_ts = moment();
+  if(req.query.d != null) {
+    from_ts = moment(req.query.d);
+    to_ts = moment(from_ts).add(1, 'days');
+  }
+
+  var options = {
+    min_timestamp: from_ts.unix(),
+    max_timestamp: to_ts.unix()
+  };
+
+  console.log('moment: ' + from_ts.format() + ' - ' + to_ts.format());
+
+  api.user_self_media_recent(options, function(err, medias, pagination, remaining, limit) {
+    if(medias == null) return;
+
+    var html_list = medias.map(function(media){
+      return '<a href="' + media.link + '">'+
+        '<img src="' + media.images.thumbnail.url + '"/></a>';
+    }).join('');
+
+    res.send(html_list);
+  });
+
+};
+
 app.get('/auth', exports.authorize_user);
 app.get('/r', exports.handleauth);
 app.get('/media', exports.handle_media);
+app.get('/moment', exports.handle_moment);
 
 http.createServer(app).listen(10001, function() {
   console.log('listening on port: ' + 10001);

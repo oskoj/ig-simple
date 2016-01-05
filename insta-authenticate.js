@@ -10,34 +10,48 @@ api.use({
 });
 
 var redirect_uri = 'http://h120n8-sto-a12.ias.bredband.telia.com:10001/r';
-var access_token_user;
+var tmp_access_token;
+
+exports.check_token = function(req, res, next) {
+  console.log(tmp_access_token + ' --> ' + req.path);
+
+  if(tmp_access_token == null && req.path != '/auth' && req.path != '/r'){
+    res.redirect('/auth?t=' + encodeURIComponent(req.originalUrl));
+  } else {
+    next();
+  }
+};
 
 exports.authorize_user = function(req, res) {
+  console.log('authorize_user...');
   res.redirect(
     api.get_authorization_url(redirect_uri, {
-      scope: ['public_content', 'follower_list'], state: 'a state'
+      scope: ['public_content', 'follower_list'], state: req.query.t
     })
   );
 };
 
-exports.handleauth = function(req , res) {
+exports.handle_auth = function(req , res) {
   api.authorize_user(req.query.code, redirect_uri, function(err, result) {
     if(err) {
       console.log(err.body);
       res.send('error >:(');
     } else {
-      console.log('yay! access_token: ' + result.access_token);
-      access_token_user = result.access_token;
-      console.log('welcome ' + result.user.username);
-      res.send('yay!')
+      console.log('yay! welcome ' + result.user.username + ' access_token: ' + result.access_token);
+      tmp_access_token = result.access_token;
+
+      if(req.query.state != null){
+        res.redirect(decodeURIComponent(req.query.state));
+      } else {
+        res.redirect('/media');
+      }
     }
   });
 };
 
 exports.handle_media = function(req, res) {
   api.use({
-    access_token: access_token_user
-    //access_token: '1607981087.7d36b85.b9e76e34478d4eb7939511b8065245ed'
+    access_token: tmp_access_token
   });
 
   var n_medias = 10;
@@ -45,7 +59,7 @@ exports.handle_media = function(req, res) {
     n_medias = req.query.c;
   }
 
-  api.user_self_media_recent({ count: n_medias, min_timestamp: from_ts , max_timestamp: to_ts}, function(err, medias, pagination, remaining, limit) {
+  api.user_self_media_recent({ count: n_medias }, function(err, medias, pagination, remaining, limit) {
     var html_list = medias.map(function(media){
       return '<a href="' + media.link + '"><img src="' + media.images.thumbnail.url + '"/></a>';
     }).join('');
@@ -55,7 +69,7 @@ exports.handle_media = function(req, res) {
 
 exports.handle_moment = function(req, res) {
   api.use({
-    access_token: '193441256.7d36b85.2f2cd5e794bd45199f5607b3b2eff080'
+    access_token: tmp_access_token
   });
 
   var from_ts = moment(0, 'HH');
@@ -85,8 +99,9 @@ exports.handle_moment = function(req, res) {
 
 };
 
+app.use(exports.check_token);
 app.get('/auth', exports.authorize_user);
-app.get('/r', exports.handleauth);
+app.get('/r', exports.handle_auth);
 app.get('/media', exports.handle_media);
 app.get('/moment', exports.handle_moment);
 

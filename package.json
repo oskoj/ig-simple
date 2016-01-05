@@ -10,7 +10,8 @@
   "dependencies": {
     "chai": "^3.4.1",
     "express": "^4.13.3",
-    "instagram-node": "^0.5.8"
+    "instagram-node": "^0.5.8",
+    "moment": "^2.11.0"
   },
   "devDependencies": {
     "mocha": "^2.3.4"

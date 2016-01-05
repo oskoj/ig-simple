@@ -2,6 +2,7 @@ var http = require('http');
 var express = require('express');
 var api = require('instagram-node').instagram();
 var app = express();
+var access_token_user;
 
 api.use({
   client_id: '7d36b8506e3241ebbd811a1650f40a41',
@@ -25,6 +26,8 @@ exports.handleauth = function(req , res) {
       res.send('error >:(');
     } else {
       console.log('yay! access_token: ' + result.access_token);
+      access_token_user = result.access_token;
+      console.log('welcome ' + result.user.username);
       res.send('yay!')
     }
   });
@@ -32,7 +35,8 @@ exports.handleauth = function(req , res) {
 
 exports.handle_media = function(req, res) {
   api.use({
-    access_token: '1607981087.7d36b85.b9e76e34478d4eb7939511b8065245ed'
+    access_token: access_token_user
+    //access_token: '1607981087.7d36b85.b9e76e34478d4eb7939511b8065245ed'
   });
 
   var n_medias = 10;
